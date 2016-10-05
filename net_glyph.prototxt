@@ -1,0 +1,117 @@
+name: "Glyph"
+
+layer {
+  name: "input"
+  type: "Data"
+  top: "data"
+  include {
+    phase: TRAIN
+  }
+  data_param {
+    source: "data_train"
+    backend: LMDB
+    batch_size: 16
+  }
+}
+
+layer {
+  name: "output"
+  type: "Data"
+  top: "label"
+  include {
+    phase: TRAIN
+  }
+  data_param {
+    source: "label_simhei_train"
+    backend: LMDB
+    batch_size: 16
+  }
+}
+
+layer {
+  name: "input"
+  type: "Data"
+  top: "data"
+  include {
+    phase: TEST
+  }
+  data_param {
+    source: "data_test"
+    backend: LMDB
+    batch_size: 16
+  }
+}
+
+layer {
+  name: "output"
+  type: "Data"
+  top: "label"
+  include {
+    phase: TEST
+  }
+  data_param {
+    source: "label_simhei_test"
+    backend: LMDB
+    batch_size: 16
+  }
+}
+
+layer {
+  name: "conv1"
+  type: "Convolution"
+  bottom: "data"
+  top: "conv1"
+  
+  convolution_param {
+    num_output: 16     
+    kernel_size: 4    
+    stride: 2          
+    weight_filler {
+      type: "gaussian" # initialize the filters from a Gaussian
+      std: 0.01        # distribution with stdev 0.01 (default mean: 0)
+    }
+    bias_filler {
+      type: "constant" # initialize the biases to zero (0)
+      value: 0
+    }
+  }
+}
+
+layer {
+  name: "pool1"
+  type: "Pooling"
+  bottom: "conv1"
+  top: "pool1"
+  pooling_param {
+    pool: MAX
+    kernel_size: 3 # pool over a 3x3 region
+    stride: 2      # step two pixels (in the bottom blob) between pooling regions
+  }
+}
+
+layer {
+  name: "fc1"
+  type: "InnerProduct"
+  inner_product_param {
+    num_output: 529
+    weight_filler {
+      type: "gaussian"
+      std: 0.01
+    }
+    bias_filler {
+      type: "constant"
+      value: 0
+    }
+  }
+  bottom: "pool1"
+  top: "fc1"
+}
+
+
+layer {
+  name: "loss"
+  type: "EuclideanLoss"
+  bottom: "fc1"
+  bottom: "label"
+  top: "loss"
+}
