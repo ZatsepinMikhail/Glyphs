@@ -45,8 +45,17 @@ def add_suffix( filename, suffix ):
 	dot_position = filename.find('.')
 	return filename[:dot_position] + suffix + filename[dot_position:]
 
+def draw_vertical_line( image, position, color ):
+	height, _, _ = image.shape
+	for i in range( height ):
+		image[i, position] = color
 
-def find_squares( filename ):
+def draw_horizontal_line( image, position, color ):
+	_, width, _ = image.shape
+	for i in range( width ):
+		image[position, i] = color
+
+def crop_image( filename ):
 
 	image = cv2.imread(filename, cv2.IMREAD_COLOR)
 	grayscale_image = cv2.imread(filename, cv2.IMREAD_GRAYSCALE)
@@ -120,5 +129,102 @@ def find_squares( filename ):
 
 	cropped_image = rotated_image[left_upper_y : right_down_y, left_upper_x : right_down_x]
 	cv2.imwrite( add_suffix(filename, '_cropped'), cropped_image )
+	return cropped_image
 
-find_squares( '1.jpg' )
+image_name = '1.jpg'
+image = crop_image( image_name )
+grayscale_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+_, binarized_image = cv2.threshold(grayscale_image, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+cv2.imwrite( add_suffix(image_name, '_cropped_binarized'), binarized_image )
+
+vertical_histogram = cv2.reduce( binarized_image, 0, cv2.cv.CV_REDUCE_AVG)[0]
+horizontal_histogram_raw = cv2.reduce( binarized_image, 1, cv2.cv.CV_REDUCE_AVG)
+horizontal_histogram = [ x[0] for x in horizontal_histogram_raw ]
+
+start_color = (255, 0, 0)
+stop_color = (0, 255, 0)
+
+# -------------------------------------------vertical histogram--------------------------------------------------------------------
+
+horizontal_starts = []
+horizontal_stops = []
+
+acceptable_threshold = 0
+min_distance_between_columns = 20
+in_hieroglyphs = False
+for i in range( image.shape[1] ):
+	if vertical_histogram[i] < 255 - acceptable_threshold:
+		if not in_hieroglyphs:
+			in_hieroglyphs = True
+			horizontal_starts.append(i)
+			draw_vertical_line( image, i, start_color )
+	elif in_hieroglyphs:
+		in_hieroglyphs = False
+		horizontal_stops.append(i)
+		draw_vertical_line( image, i, stop_color )
+
+horizontal_zone_sizes = []
+stop_index = 0
+for start_index in range( len( horizontal_starts ) ):
+	while stop_index < len(horizontal_stops) and horizontal_stops[stop_index] < horizontal_starts[start_index]:
+		stop_index = stop_index + 1
+	if stop_index == len( horizontal_stops ):
+		break
+	else:
+		horizontal_zone_sizes.append( horizontal_stops[stop_index] - horizontal_starts[start_index] )
+		print horizontal_starts[start_index], horizontal_stops[stop_index], horizontal_stops[stop_index] - horizontal_starts[start_index]
+
+horizontal_zone_sizes.sort()
+column_width = horizontal_zone_sizes[len(horizontal_zone_sizes) / 2]
+print 'zone number: ' + str(len(horizontal_zone_sizes))
+print min(horizontal_zone_sizes)
+print horizontal_zone_sizes[len(horizontal_zone_sizes) / 2]
+print max(horizontal_zone_sizes)
+print '\n----------------------------\n'
+print horizontal_zone_sizes
+
+# -------------------------------------------horizontal histogram-----------------------------------------------------------------
+
+vertical_starts = []
+vertical_stops = []
+
+acceptable_threshold = 0
+min_distance_between_columns = 20
+in_hieroglyphs = False
+for i in range( image.shape[0] ):
+	if horizontal_histogram[i] < 255 - acceptable_threshold:
+		if not in_hieroglyphs:
+			in_hieroglyphs = True
+			vertical_starts.append(i)
+			draw_horizontal_line( image, i, start_color )
+	elif in_hieroglyphs:
+		in_hieroglyphs = False
+		vertical_stops.append(i)
+		draw_horizontal_line( image, i, stop_color )
+
+vertical_zone_sizes = []
+stop_index = 0
+for start_index in range( len( vertical_starts ) ):
+	while stop_index < len(vertical_stops) and vertical_stops[stop_index] < vertical_starts[start_index]:
+		stop_index = stop_index + 1
+	if stop_index == len( vertical_stops ):
+		break
+	else:
+		vertical_zone_sizes.append( vertical_stops[stop_index] - vertical_starts[start_index] )
+		print vertical_starts[start_index], vertical_stops[stop_index], vertical_stops[stop_index] - vertical_starts[start_index]
+
+vertical_zone_sizes.sort()
+print 'zone number: ' + str(len(vertical_zone_sizes))
+print min(vertical_zone_sizes)
+print vertical_zone_sizes[len(vertical_zone_sizes) / 2]
+print max(vertical_zone_sizes)
+print '\n----------------------------\n'
+print horizontal_zone_sizes
+raw_height = vertical_zone_sizes[len(vertical_zone_sizes) / 2]
+
+# -------------------------------------------cut------------------------------------------------------------------------------------
+
+columns = []
+#for 
+
+cv2.imwrite( add_suffix(image_name, '_histograms'), image )
