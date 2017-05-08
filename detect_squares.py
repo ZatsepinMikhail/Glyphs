@@ -157,12 +157,13 @@ for i in range( image.shape[1] ):
 		if not in_hieroglyphs:
 			in_hieroglyphs = True
 			horizontal_starts.append(i)
-			draw_vertical_line( image, i, start_color )
+			#draw_vertical_line( image, i, start_color )
 	elif in_hieroglyphs:
 		in_hieroglyphs = False
 		horizontal_stops.append(i)
-		draw_vertical_line( image, i, stop_color )
+		#draw_vertical_line( image, i, stop_color )
 
+horizontal_zones = []
 horizontal_zone_sizes = []
 stop_index = 0
 for start_index in range( len( horizontal_starts ) ):
@@ -172,7 +173,8 @@ for start_index in range( len( horizontal_starts ) ):
 		break
 	else:
 		horizontal_zone_sizes.append( horizontal_stops[stop_index] - horizontal_starts[start_index] )
-		print horizontal_starts[start_index], horizontal_stops[stop_index], horizontal_stops[stop_index] - horizontal_starts[start_index]
+		horizontal_zones.append( ( horizontal_starts[start_index], horizontal_stops[stop_index] ) )
+		#print horizontal_starts[start_index], horizontal_stops[stop_index], horizontal_stops[stop_index] - horizontal_starts[start_index]
 
 horizontal_zone_sizes.sort()
 column_width = horizontal_zone_sizes[len(horizontal_zone_sizes) / 2]
@@ -196,12 +198,13 @@ for i in range( image.shape[0] ):
 		if not in_hieroglyphs:
 			in_hieroglyphs = True
 			vertical_starts.append(i)
-			draw_horizontal_line( image, i, start_color )
+			#draw_horizontal_line( image, i, start_color )
 	elif in_hieroglyphs:
 		in_hieroglyphs = False
 		vertical_stops.append(i)
-		draw_horizontal_line( image, i, stop_color )
+		#draw_horizontal_line( image, i, stop_color )
 
+vertical_zones = []
 vertical_zone_sizes = []
 stop_index = 0
 for start_index in range( len( vertical_starts ) ):
@@ -211,7 +214,8 @@ for start_index in range( len( vertical_starts ) ):
 		break
 	else:
 		vertical_zone_sizes.append( vertical_stops[stop_index] - vertical_starts[start_index] )
-		print vertical_starts[start_index], vertical_stops[stop_index], vertical_stops[stop_index] - vertical_starts[start_index]
+		vertical_zones.append( ( vertical_starts[start_index], vertical_stops[stop_index] ) )
+		#print vertical_starts[start_index], vertical_stops[stop_index], vertical_stops[stop_index] - vertical_starts[start_index]
 
 vertical_zone_sizes.sort()
 print 'zone number: ' + str(len(vertical_zone_sizes))
@@ -220,11 +224,29 @@ print vertical_zone_sizes[len(vertical_zone_sizes) / 2]
 print max(vertical_zone_sizes)
 print '\n----------------------------\n'
 print horizontal_zone_sizes
-raw_height = vertical_zone_sizes[len(vertical_zone_sizes) / 2]
+row_height = vertical_zone_sizes[len(vertical_zone_sizes) / 2]
 
-# -------------------------------------------cut------------------------------------------------------------------------------------
+# -------------------------------------------cut hieroglyphs------------------------------------------------------------------------------------
 
-columns = []
-#for 
+column_number = 8
+row_number = 17
 
-cv2.imwrite( add_suffix(image_name, '_histograms'), image )
+horizontal_zone_sizes = [ abs( size -  column_width ) for size in horizontal_zone_sizes ]
+horizontal_zone_sizes.sort()
+acceptable_horizontal_diff = horizontal_zone_sizes[column_number - 1]
+
+vertical_zone_sizes = [ abs( size -  row_height ) for size in vertical_zone_sizes ]
+vertical_zone_sizes.sort()
+acceptable_vertical_diff = vertical_zone_sizes[row_number - 1]
+
+hieroglyph_id = 0
+for row_index in range( len( vertical_zones ) ):
+	current_vertical_size = vertical_zones[row_index][1] - vertical_zones[row_index][0]
+	if abs( current_vertical_size - row_height ) <= acceptable_vertical_diff:
+		
+		for col_index in range( len( horizontal_zones ) ):
+			current_horizontal_size = horizontal_zones[col_index][1] - horizontal_zones[col_index][0]
+			if abs( current_horizontal_size - column_width ) <=  acceptable_horizontal_diff:
+				hieroglyph_cell = image[ vertical_zones[row_index][0] : vertical_zones[row_index][1], horizontal_zones[col_index][0] : horizontal_zones[col_index][1] ]
+				cv2.imwrite( add_suffix(image_name, '_' + str( hieroglyph_id ) ), hieroglyph_cell )
+				hieroglyph_id = hieroglyph_id + 1
